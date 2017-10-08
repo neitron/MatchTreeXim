@@ -1,0 +1,3 @@
+1) change sprites loader
+2) scriptable object for candy
+3) clean delegates

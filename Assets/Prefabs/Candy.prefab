@@ -78,6 +78,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8806ea48f2d60dd4eaec81167ef00677, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  cell: {x: 0, y: 0}
 --- !u!212 &212591628838006454
 SpriteRenderer:
   m_ObjectHideFlags: 1
@@ -91,7 +92,7 @@ SpriteRenderer:
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
   m_Materials:
-  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 25c9fcd48b4175c438a781f91e44b7e9, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
