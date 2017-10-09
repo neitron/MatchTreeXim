@@ -78,7 +78,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8806ea48f2d60dd4eaec81167ef00677, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cell: {x: 0, y: 0}
+  debText: {fileID: 0}
 --- !u!212 &212591628838006454
 SpriteRenderer:
   m_ObjectHideFlags: 1

@@ -11,7 +11,9 @@ public class Candy : ScriptableObject
 	[SerializeField]
 	int id = -1;
 
-	public Sprite mainSprite { get { return sprite[0]; } }
+	public Sprite mainSprite { get { if (sprite.Length > 1) return sprite[0]; else return null; } }
+	public Sprite hSprite { get { if (sprite.Length > 2) return sprite[1]; else return null; } }
+	public Sprite vSprite { get { if (sprite.Length > 3) return sprite[2]; else return null; } }
 
 	public int type { get { return id; } }
 

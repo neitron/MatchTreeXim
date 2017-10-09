@@ -16,7 +16,7 @@ public class Board : MonoBehaviour
 
 	private void Awake()
 	{
-		if(instance == null)
+		if (instance == null)
 		{
 			instance = this;
 		}
@@ -28,6 +28,15 @@ public class Board : MonoBehaviour
 	#endregion
 
 
+	public ParticleSystem ps;
+
+	public float fallingDuration = 0.2f;
+	public Ease fallingEase = Ease.Linear;
+	public float swapDuration = 0.2f;
+	public float releaseDuration = 0.2f;
+	public float releaseOvershot = 2.5f;
+	public Ease releaseEase = Ease.Linear;
+
 
 	[SerializeField]
 	new Camera camera;
@@ -35,7 +44,7 @@ public class Board : MonoBehaviour
 	[SerializeField]
 	Texture2D boardPattern;
 
-	[SerializeField, Tooltip("")]
+	[SerializeField, Tooltip("Must be on 2 smaller than texture pattern")]
 	Vector2 size;
 
 	[SerializeField]
@@ -59,6 +68,19 @@ public class Board : MonoBehaviour
 	[SerializeField]
 	Candy[] candyTypes;
 
+
+	public RectTransform roof;
+
+
+	[SerializeField]
+	Text scoreText;
+
+	float score;
+	float scoreToShow;
+
+	Coroutine takeScoreC;
+
+
 	int rows { get { return (int)size.x; } }
 	int cols { get { return (int)size.y; } }
 
@@ -73,7 +95,7 @@ public class Board : MonoBehaviour
 			int x = (int)cell.x;
 			int y = (int)cell.y;
 
-			if(x < cols && x >= 0 && y < rows && y >= 0)
+			if (x < cols && x >= 0 && y < rows && y >= 0)
 			{
 				return candies[x, y];
 			}
@@ -93,28 +115,45 @@ public class Board : MonoBehaviour
 			Debug.LogErrorFormat("Out of range x = {0}, y = {1}", x, y);
 		}
 	}
+	
 
-
-	public RectTransform deb;
-	public Text debCellOrigin;
 
 	void Start()
 	{
+		StartSession();
+	}
+
+
+	public void StartSession()
+	{
+		roof.sizeDelta = roof.sizeDelta + Vector2.up * 1500;
+
 		candies = new CandyCell[cols, rows];
 
-		Random rand = new Random(DateTime.Now.Millisecond);
 		Vector2 center = camera.ScreenToWorldPoint(new Vector2(Screen.width, Screen.height) * 0.5f);
-		Vector2 offset = center - (size - Vector2.one) * 0.5f * padding;
+		Vector2 offset = center - (size - Vector2.one) * 0.5f * padding + (Vector2)transform.position;
 
-		Color[] pixels;
-		if (boardPattern != null && unpackPattern(out pixels))
+		Stack<CandyCell> stack = new Stack<CandyCell>();
+		for (int i = 0; i < size.x * size.y; i++)
 		{
-			StartCoroutine(fillBoardUsePattern(pixels, offset, rand));
+			stack.Push(Instantiate(originalCandy.GetComponent<CandyCell>()));
 		}
-		else
-		{
-			StartCoroutine(fillBoard(offset, rand));
-		}
+
+		roof.DOSizeDelta(roof.sizeDelta - Vector2.up * 1500, 1.0f)
+			.SetEase(Ease.OutBounce)
+			.SetDelay(2.0f)
+			.OnComplete(delegate
+			{
+				Color[] pixels;
+				if (boardPattern != null && unpackPattern(out pixels))
+				{
+					StartCoroutine(fillBoardUsePattern(pixels, offset, stack));
+				}
+				else
+				{
+					StartCoroutine(fillBoard(offset, stack));
+				}
+			});
 	}
 
 
@@ -134,12 +173,11 @@ public class Board : MonoBehaviour
 	}
 
 
-	IEnumerator fillBoardUsePattern(Color[] pattern, Vector2 offset, Random rand)
+	IEnumerator fillBoardUsePattern(Color[] pattern, Vector2 offset, Stack<CandyCell> stack)
 	{
 		WaitForSeconds wait = new WaitForSeconds(individualSpawnDelay);
 
 		Vector2 cell = Vector2.zero;
-		CandyCell candy = originalCandy.GetComponent<CandyCell>();
 
 		for (int i = 0; i < rows; i++)
 		{
@@ -147,27 +185,41 @@ public class Board : MonoBehaviour
 			{
 				if (pattern[i * (int)size.y + j].r > 0)
 				{
-					int index = rand.Next(candyTypes.Length);
 					cell.x = j;
 					cell.y = i;
-					this[cell] = spawnField(offset + cell * padding, cell, candyTypes[index], candy);
 
-					var pos = camera.WorldToScreenPoint(offset + cell * padding);
-					this[cell].debText = Instantiate<Text>(debCellOrigin, pos, Quaternion.identity, deb.transform);
+					Candy candy;
+					do
+					{
+						candy = getRundomly();
+					}
+					while (
+						this[cell + Vector2.down] == this[cell + Vector2.down * 2] && this[cell + Vector2.down] == candy.type ||
+						this[cell + Vector2.left] == this[cell + Vector2.left * 2] && this[cell + Vector2.left] == candy.type);
+
+					this[cell] = spawnField(offset + cell * padding, cell, candy, stack.Pop());
+
+					//var pos = camera.WorldToScreenPoint(offset + cell * padding);
+					//this[cell].debText = Instantiate<Text>(debCellOrigin, pos, Quaternion.identity, deb.transform);
 
 					yield return wait;
 				}
 			}
 		}
+
+		//foreach (var extraCell in stack.ToArray())
+		//{
+		//	Destroy(extraCell.gameObject);
+		//}
+		//stack.Clear();
 	}
 
 
-	IEnumerator fillBoard(Vector2 offset, Random rand)
+	IEnumerator fillBoard(Vector2 offset, Stack<CandyCell> stack)
 	{
 		WaitForSeconds wait = new WaitForSeconds(individualSpawnDelay);
 
 		Vector2 cell = Vector2.zero;
-		CandyCell candy = originalCandy.GetComponent<CandyCell>();
 
 		for (int i = 0; i < rows; i++)
 		{
@@ -175,12 +227,32 @@ public class Board : MonoBehaviour
 			{
 				cell.x = j;
 				cell.y = i;
-				this[cell] = spawnField(offset + cell * padding, cell, candyTypes[rand.Next(candyTypes.Length)], candy);
+				this[cell] = spawnField(offset + cell * padding, cell, getRundomly(), stack.Pop());
+
+				yield return wait;
 			}
-			yield return wait;
 		}
+
+		//foreach (var extraCell in stack.ToArray())
+		//{
+		//	Destroy(extraCell.gameObject);
+		//}
+		//stack.Clear();
 	}
 
+
+	Random rand = new Random(DateTime.Now.Millisecond);
+	internal Candy getRundomly()
+	{
+		return candyTypes[rand.Next(candyTypes.Length)];
+	}
+
+
+	public float spawnPositionY
+	{
+		get;
+		protected set;
+	}
 
 	CandyCell spawnField(Vector3 pos, Vector2 cell, Candy candy, CandyCell candyComponent)
 	{
@@ -189,9 +261,10 @@ public class Board : MonoBehaviour
 		bck.transform.DOScale(fieldScale, 0.2f).SetEase(Ease.OutBack);
 
 		var spawnPos = pos;
-		spawnPos.y = camera.ScreenToWorldPoint(new Vector2(Screen.width, Screen.height)).y + 5.0f;
+		spawnPositionY = camera.ScreenToWorldPoint(new Vector2(Screen.width, Screen.height)).y + 1.0f;
+		spawnPos.y = spawnPositionY;
 
-		return CandyCell.create(candyComponent, cell, pos, spawnPos, candy, transform, candiesScale);
+		return candyComponent.init(cell, pos, spawnPos, candy, transform, candiesScale);
 	}
 	#endregion
 
@@ -199,17 +272,12 @@ public class Board : MonoBehaviour
 	internal void OnCandyUnfocused(Vector2 cell)
 	{
 		focusedCandy = -Vector2.one;
-
-		updateDebInfo();
 	}
 
 
 	internal void OnCandyFocused(Vector2 cell)
 	{
 		focusedCandy = cell;
-		Debug.Log("Focused " + cell);
-
-		updateDebInfo();
 	}
 
 
@@ -217,8 +285,6 @@ public class Board : MonoBehaviour
 	{
 		if (focusedCandy != -Vector2.one)
 		{
-			Debug.Log("Over " + overCandy);
-
 			var dir = overCandy - focusedCandy;
 			
 			// prevent diagonals
@@ -241,63 +307,117 @@ public class Board : MonoBehaviour
 			}
 
 			focusedCandy = -Vector2.one;
-
-			updateDebInfo();
 		}
 	}
 
 
-	List<Vector2> pool = new List<Vector2>();
-	private void findMatchesLocally(Vector2 fc, Vector2 oc)
+	private void findMatches()
 	{
-		findMatchFor(fc).ForEach(item => item.Despawn(pool));
-		findMatchFor(oc).ForEach(item => item.Despawn(pool));
-
 		Vector2 cell = Vector2.zero;
-		//for (int i = rows - 1; i >= 0; i--)
+		List<CandyCell> candiesToDelete = new List<CandyCell>();
+
+		for (int i = 0; i < rows; i++)
 		{
-			//for (int j = 0; j < cols; j++)
-			//{
-			//	cell.x = j;
-			//	cell.y = rows - 1;
-
-			//	fallDown(cell, delegate
-			//	{ fallDown(cell, null); });
-			//}
-		}
-
-
-		for (int j = 0; j < cols; j++)
-		{
-			for (int i = 0; i < rows; i++)
+			for (int j = 0; j < cols; j++)
 			{
 				cell.x = j;
 				cell.y = i;
-				if(CandyCell.isAvalible(this[cell]))
+
+				if(this[cell] != null && !candiesToDelete.Contains(this[cell]))
 				{
-					fallDown(cell);
-					break; // GO TO NEXR COLUMN
+					candiesToDelete.AddRange(findMatchFor(cell));
 				}
 			}
+		}
+
+		if(candiesToDelete.Count > 0)
+		{
+			CandyCell.release(candiesToDelete, fallCandiesDown);
 		}
 	}
 
 
-	private void fallDown(Vector2 cell)
+	private void findMatchesLocally(Vector2 fc, Vector2 oc)
 	{
+		var candiesToDelete = findMatchFor(fc);
+		candiesToDelete.AddRange(findMatchFor(oc));
+
+		CandyCell.release(candiesToDelete, fallCandiesDown);
+	}
+
+
+	public void takePoints(int addScore)
+	{
+		if(takeScoreC != null)
+		{
+			scoreToShow = score;
+			StopCoroutine(takeScoreC);
+		}
+		score += addScore;
+		takeScoreC = StartCoroutine( takeScore(scoreToShow + addScore));
+	}
+
+
+	private IEnumerator takeScore(float sum)
+	{
+		while (scoreToShow != sum)
+		{
+			scoreToShow++;
+			scoreText.text = string.Format("Score: {0}", (int)scoreToShow);
+			yield return new WaitForSeconds(0.001f);
+		}
+	}
+
+
+	private void fallCandiesDown()
+	{
+		Vector2 cell = Vector2.zero;
+		for (int j = 0; j < cols; j++)
+		{
+			cell.x = j;
+			cell.y = 0;
+			fallColumnDown(cell);
+		}
+
+		CandyCell.addCandies(findMatches);
+	}
+
+
+	private void fallColumnDown(Vector2 cell)
+	{
+		if( cell.y == rows )
+		{
+			return;
+		}
+		//Debug.LogFormat("Current cell: {0} = {1}", cell, this[cell]);
+
+		if ( this[cell] == null || CandyCell.isNotReleased(this[cell]) )
+		{
+			fallColumnDown(cell + Vector2.up);
+			return;
+		}
+
+		//Debug.LogFormat("To swap cell: {0} = {1}", cell, CandyCell.isNotReleased(this[cell]));
+
 		var current = cell;
 		do
 		{
 			cell += Vector2.up;
-		} while (cell.y < rows && ( this[cell] == null || CandyCell.isAvalible(this[cell])));
-		
-		fallingSwap(current, cell, delegate { fallDown(current + Vector2.up); });
+		}
+		while (cell.y < rows && (this[cell] == null || CandyCell.isReleased(this[cell]) ) );
+
+		if (this[cell] != null)
+		{
+			//Debug.LogFormat("Swap cell:\n {0} = {1}\n {2} = {3}\n", current, this[current], cell, this[cell]);
+			fallingSwap(current, cell, null);
+			fallColumnDown(current + Vector2.up);
+		}
 	}
 
 
 	private List<CandyCell> findMatchFor(Vector2 cell)
 	{
-		Debug.Log("Look for: " + cell.ToString("N"));
+		//Debug.Log("Look for: " + cell.ToString("N"));
 
 		Vector2 pCell = cell;
 		var candy = this[cell];
@@ -308,7 +428,7 @@ public class Board : MonoBehaviour
 		lookForMatch(candy, cell + Vector2.left, Vector2.right, hseq);
 		lookForMatch(candy, cell, Vector2.left, hseq);
 
-		Debug.Log("h : " + hseq.Count + " of type " + candy.candy.type);
+		//Debug.Log("h : " + hseq.Count + " of type " + candy.candy.type);
 
 		if (hseq.Count < 3)
 		{
@@ -321,7 +441,7 @@ public class Board : MonoBehaviour
 		lookForMatch(candy, cell, Vector2.up, vseq);
 		lookForMatch(candy, cell, Vector2.down, vseq);
 
-		Debug.Log("v : " + vseq.Count + " of type " + candy.candy.type);
+		//Debug.Log("v : " + vseq.Count + " of type " + candy.candy.type);
 
 		if (vseq.Count < 2)
 		{
@@ -334,7 +454,7 @@ public class Board : MonoBehaviour
 
 		vseq.AddRange(hseq);
 
-		Debug.Log(vseq.Count + " of type " + candy.candy.type);
+		//Debug.Log(vseq.Count + " of type " + candy.candy.type);
 
 		if(vseq.Count <= 2)
 		{
@@ -351,21 +471,6 @@ public class Board : MonoBehaviour
 		{
 			seq.Add(this[pCell]);
 			pCell += dir;
-		}
-	}
-
-
-	void updateDebInfo()
-	{
-		for (int i = 0; i < rows; i++)
-		{
-			for (int j = 0; j < cols; j++)
-			{
-				if(candies[j, i] != null)
-				{
-					candies[j, i].updateDebInfo(camera);
-				}
-			}
 		}
 	}
 

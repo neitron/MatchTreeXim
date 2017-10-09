@@ -34,7 +34,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1219630479408854}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -51,26 +51,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dae57594dff98984b836afe6df149bd5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ps: {fileID: 0}
+  fallingDuration: 0.4
+  fallingEase: 30
+  swapDuration: 0.2
+  releaseDuration: 0.2
+  releaseOvershot: 2.5
+  releaseEase: 26
   camera: {fileID: 0}
   boardPattern: {fileID: 2800000, guid: 4c430f56424819a448603f9ed923d7b5, type: 3}
   size: {x: 10, y: 10}
   padding: 0.8
-  candiesScale: 1.1
-  fieldScale: 0.65
+  candiesScale: 1.2
+  fieldScale: 1.3
+  individualSpawnDelay: 0.02
   originalCandy: {fileID: 1633533487510018, guid: f2af9bc2191b99b4d822c9dfc33587fb,
     type: 2}
   originalTileBack: {fileID: 1439514284618624, guid: eb081cc3af3282a43bbe19cfb8d3f4ca,
     type: 2}
-  sprites:
-  - {fileID: 21300000, guid: 7f71e024d9332c74a8d06cc9867f279b, type: 3}
-  - {fileID: 21300000, guid: 31178a648b1d4e74aab31f1b12e993c2, type: 3}
-  - {fileID: 21300000, guid: 08b7274c33e7c334fa9bdfdb8f6656d5, type: 3}
-  - {fileID: 21300000, guid: 0c650e9a914ac1d4b814ff43b10a014a, type: 3}
-  - {fileID: 21300000, guid: aaccdc8df56f64345983e68352f3c6be, type: 3}
-  - {fileID: 21300000, guid: 8d9d26032c946d949a741e51ed74d475, type: 3}
-  - {fileID: 21300000, guid: f0f9d41c84cd23f4aacb29de3ba49c6f, type: 3}
-  - {fileID: 21300000, guid: 6c3ce8fb9a2af7e4c9fecb6a58876a6d, type: 3}
-  - {fileID: 21300000, guid: fd5f5e411511e3a4d8cf936dbb033301, type: 3}
-  - {fileID: 21300000, guid: 71c86ca40a148dc409998b8e03403514, type: 3}
-  - {fileID: 21300000, guid: feb31e8c1c04517438c64543230b4d45, type: 3}
-  - {fileID: 21300000, guid: 75bbe2c473a3ca9438f2d7f1091dfb98, type: 3}
+  candyTypes:
+  - {fileID: 11400000, guid: ad751cda0942c864aa3fcac3f44a489f, type: 2}
+  - {fileID: 11400000, guid: bdeea3dee9d6ba146a2f9c1f6231f502, type: 2}
+  - {fileID: 11400000, guid: 22152f1ca239a9a4b98485c979e13fc4, type: 2}
+  - {fileID: 11400000, guid: 1f31e68ef782ab04aae5a9488907e5aa, type: 2}
+  - {fileID: 11400000, guid: 7704584cc260f46439d7e563c13392a2, type: 2}
+  - {fileID: 11400000, guid: 0b25f96af1c354e4e81d2343fdcb932d, type: 2}
+  roof: {fileID: 0}
+  scoreText: {fileID: 0}
