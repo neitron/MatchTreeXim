@@ -77,4 +77,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7704584cc260f46439d7e563c13392a2, type: 2}
   - {fileID: 11400000, guid: 0b25f96af1c354e4e81d2343fdcb932d, type: 2}
   roof: {fileID: 0}
+  playButton: {fileID: 0}
   scoreText: {fileID: 0}

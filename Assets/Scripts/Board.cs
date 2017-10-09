@@ -42,7 +42,7 @@ public class Board : MonoBehaviour
 	new Camera camera;
 
 	[SerializeField]
-	Texture2D boardPattern;
+	Texture2D[] boardPatterns;
 
 	[SerializeField, Tooltip("Must be on 2 smaller than texture pattern")]
 	Vector2 size;
@@ -70,7 +70,8 @@ public class Board : MonoBehaviour
 
 
 	public RectTransform roof;
-
+	public RectTransform mapSelector;
+	public RectTransform playButton;
 
 	[SerializeField]
 	Text scoreText;
@@ -115,37 +116,39 @@ public class Board : MonoBehaviour
 			Debug.LogErrorFormat("Out of range x = {0}, y = {1}", x, y);
 		}
 	}
-	
+
+	Stack<CandyCell> stack = new Stack<CandyCell>();
+
 
 
 	void Start()
 	{
-		StartSession();
+		takePoints(PlayerPrefs.GetInt("_Score", 0));
+
+		candies = new CandyCell[cols, rows];
+
+		for (int i = 0; i < cols * rows; i++)
+		{
+			stack.Push(Instantiate(originalCandy.GetComponent<CandyCell>()));
+		}
 	}
 
 
 	public void StartSession()
 	{
-		roof.sizeDelta = roof.sizeDelta + Vector2.up * 1500;
-
-		candies = new CandyCell[cols, rows];
-
+		mapSelector.DOAnchorPos(mapSelector.anchoredPosition + Vector2.up * Screen.height, 0.1f);
 		Vector2 center = camera.ScreenToWorldPoint(new Vector2(Screen.width, Screen.height) * 0.5f);
 		Vector2 offset = center - (size - Vector2.one) * 0.5f * padding + (Vector2)transform.position;
 
-		Stack<CandyCell> stack = new Stack<CandyCell>();
-		for (int i = 0; i < size.x * size.y; i++)
-		{
-			stack.Push(Instantiate(originalCandy.GetComponent<CandyCell>()));
-		}
+		playButton.DOAnchorPos(playButton.anchoredPosition + Vector2.down * 250, 0.5f);
+		playButton.DORotate(Vector3.forward * 90, 0.5f);
 
-		roof.DOSizeDelta(roof.sizeDelta - Vector2.up * 1500, 1.0f)
+		roof.DOSizeDelta(roof.sizeDelta - Vector2.up * 1600, 1.0f)
 			.SetEase(Ease.OutBounce)
-			.SetDelay(2.0f)
 			.OnComplete(delegate
 			{
 				Color[] pixels;
-				if (boardPattern != null && unpackPattern(out pixels))
+				if (unpackPattern(out pixels))
 				{
 					StartCoroutine(fillBoardUsePattern(pixels, offset, stack));
 				}
@@ -157,18 +160,43 @@ public class Board : MonoBehaviour
 	}
 
 
+	public void takePoints(int addScore)
+	{
+		if (takeScoreC != null)
+		{
+			scoreToShow = score;
+			StopCoroutine(takeScoreC);
+		}
+		score += addScore;
+		PlayerPrefs.SetInt("_Score", (int)score);
+		PlayerPrefs.Save();
+		takeScoreC = StartCoroutine(takeScore(scoreToShow + addScore));
+	}
+
+
+	private IEnumerator takeScore(float sum)
+	{
+		while (scoreToShow != sum)
+		{
+			scoreToShow++;
+			scoreText.text = string.Format("Score: {0}", (int)scoreToShow);
+			yield return new WaitForSeconds(0.001f);
+		}
+	}
+
+
 	#region Fill Board
 	bool unpackPattern(out Color[] pattern)
 	{
 		pattern = null;
-
-		if (boardPattern.width > cols + 1 && boardPattern.height > rows + 1)
+		Texture2D tex = boardPatterns[MapSelector.currentMap];
+		if (tex.width > cols + 1 && tex.height > rows + 1)
 		{
-			Vector2 texOffset = new Vector2((boardPattern.width - rows), (boardPattern.height - cols)) * 0.5f;
-			pattern = boardPattern.GetPixels((int)texOffset.x, (int)texOffset.y, rows, cols);
+			Vector2 texOffset = new Vector2((tex.width - rows), (tex.height - cols)) * 0.5f;
+			pattern = tex.GetPixels((int)texOffset.x, (int)texOffset.y, rows, cols);
 			return true;
 		}
-		Debug.LogWarningFormat("Size of board must to be less that texture size for 2 in each axis, texture size ({0}, {1}) <= board size {2}", boardPattern.width, boardPattern.height, size);
+		Debug.LogWarningFormat("Size of board must to be less that texture size for 2 in each axis, texture size ({0}, {1}) <= board size {2}", tex.width, tex.height, size);
 		return false;
 	}
 
@@ -345,30 +373,7 @@ public class Board : MonoBehaviour
 		CandyCell.release(candiesToDelete, fallCandiesDown);
 	}
 
-
-	public void takePoints(int addScore)
-	{
-		if(takeScoreC != null)
-		{
-			scoreToShow = score;
-			StopCoroutine(takeScoreC);
-		}
-		score += addScore;
-		takeScoreC = StartCoroutine( takeScore(scoreToShow + addScore));
-	}
-
-
-	private IEnumerator takeScore(float sum)
-	{
-		while (scoreToShow != sum)
-		{
-			scoreToShow++;
-			scoreText.text = string.Format("Score: {0}", (int)scoreToShow);
-			yield return new WaitForSeconds(0.001f);
-		}
-	}
-
-
+	
 	private void fallCandiesDown()
 	{
 		Vector2 cell = Vector2.zero;
